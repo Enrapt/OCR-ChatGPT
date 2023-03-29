@@ -16,8 +16,6 @@ const ApiKeyCredentials = require("@azure/ms-rest-js").ApiKeyCredentials;
  */
 const key = process.env.KEY;
 const endpoint = process.env.ENDPOINT;
-console.log("key: ", key);
-console.log("endpoint: ", endpoint);
 
 const computerVisionClient = new ComputerVisionClient(
   new ApiKeyCredentials({ inHeader: { "Ocp-Apim-Subscription-Key": key } }),
@@ -42,7 +40,7 @@ function computerVision() {
         // URL images containing printed and/or handwritten text.
         // The URL can point to image files (.jpg/.png/.bmp) or multi-page files (.pdf, .tiff).
         const printedTextSampleURL =
-          "https://raw.githubusercontent.com/Azure-Samples/cognitive-services-sample-data-files/master/ComputerVision/Images/printed_text.jpg";
+          "https://github.com/HaraKanon/OCR/blob/main/receipt.JPG";
 
         // Recognize text in printed image from a URL
         console.log(
