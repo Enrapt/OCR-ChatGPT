@@ -5,6 +5,7 @@ const fs = require("fs");
 const https = require("https");
 const path = require("path");
 require("dotenv").config();
+const { Configuration, OpenAIApi } = require("openai");
 const createReadStream = require("fs").createReadStream;
 const sleep = require("util").promisify(setTimeout);
 const ComputerVisionClient =
@@ -25,6 +26,21 @@ const computerVisionClient = new ComputerVisionClient(
  * END - Authenticate
  */
 
+const configuration = new Configuration({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+const openai = new OpenAIApi(configuration);
+
+async function ask(content) {
+  const response = await openai.createChatCompletion({
+    model: "gpt-3.5-turbo-0301",
+    messages: [{ role: "user", content: content }],
+  });
+
+  const answer = await response.data.choices[0].message?.content;
+  console.log(answer);
+}
+
 function computerVision() {
   async.series(
     [
@@ -33,9 +49,6 @@ function computerVision() {
          * OCR: READ PRINTED & HANDWRITTEN TEXT WITH THE READ API
          * Extracts text from images using OCR (optical character recognition).
          */
-        console.log("-------------------------------------------------");
-        console.log("READ PRINTED, HANDWRITTEN TEXT AND PDF");
-        console.log();
 
         // URL images containing printed and/or handwritten text.
         // The URL can point to image files (.jpg/.png/.bmp) or multi-page files (.pdf, .tiff).
@@ -43,10 +56,6 @@ function computerVision() {
           "https://raw.githubusercontent.com/HaraKanon/OCR/main/receipt.jpeg";
 
         // Recognize text in printed image from a URL
-        console.log(
-          "Read printed text from URL...",
-          printedTextSampleURL.split("/").pop()
-        );
         const printedResult = await readTextFromURL(
           computerVisionClient,
           printedTextSampleURL
@@ -70,8 +79,8 @@ function computerVision() {
         }
 
         // Prints all text from Read result
-        function printRecText(readResults) {
-          console.log("Recognized text:");
+        async function printRecText(readResults) {
+          const array = [];
           for (const page in readResults) {
             if (readResults.length > 1) {
               console.log(`==== Page: ${page}`);
@@ -79,12 +88,15 @@ function computerVision() {
             const result = readResults[page];
             if (result.lines.length) {
               for (const line of result.lines) {
-                console.log(line.words.map((w) => w.text).join(" "));
+                array.push(line.words.map((w) => w.text).join(" "));
               }
             } else {
               console.log("No recognized text.");
             }
           }
+          await ask(
+            `以下のテキストから日付、合計金額、商品名を抽出してください。 text:${array}`
+          );
         }
 
         /**
@@ -123,9 +135,6 @@ function computerVision() {
         /**
          * END - Recognize Printed & Handwritten Text
          */
-        console.log();
-        console.log("-------------------------------------------------");
-        console.log("End of quickstart.");
       },
       function () {
         return new Promise((resolve) => {
