@@ -40,7 +40,7 @@ function computerVision() {
         // URL images containing printed and/or handwritten text.
         // The URL can point to image files (.jpg/.png/.bmp) or multi-page files (.pdf, .tiff).
         const printedTextSampleURL =
-          "https://raw.githubusercontent.com/HaraKanon/OCR/main/receipt.png";
+          "https://raw.githubusercontent.com/HaraKanon/OCR/main/receipt.jpeg";
 
         // Recognize text in printed image from a URL
         console.log(
