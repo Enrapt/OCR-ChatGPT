@@ -5,7 +5,6 @@ const fs = require("fs");
 const https = require("https");
 const path = require("path");
 require("dotenv").config();
-const createReadStream = require("fs").createReadStream;
 const sleep = require("util").promisify(setTimeout);
 const ComputerVisionClient =
   require("@azure/cognitiveservices-computervision").ComputerVisionClient;
@@ -26,52 +25,40 @@ const computerVisionClient = new ComputerVisionClient(
  */
 
 function computerVision() {
+  // 関数の配列を順番に実行します。非同期タスクを順次処理するために使用します。
   async.series(
     [
       async function () {
-        /**
-         * OCR: READ PRINTED & HANDWRITTEN TEXT WITH THE READ API
-         * Extracts text from images using OCR (optical character recognition).
-         */
-        console.log("-------------------------------------------------");
-        console.log("READ PRINTED, HANDWRITTEN TEXT AND PDF");
-        console.log();
+        // 印刷されたテキストや手書きのテキストを含む URL 画像。
+        // URL は、画像ファイル (.jpg/.png/.bmp) または複数ページ ファイル (.pdf、.tiff) を指すことができます。
+        // 今回はコマンドライン引数からURLを渡しています。
+        const printedTextSampleURL = process.argv[2];
 
-        // URL images containing printed and/or handwritten text.
-        // The URL can point to image files (.jpg/.png/.bmp) or multi-page files (.pdf, .tiff).
-        const printedTextSampleURL =
-          "https://raw.githubusercontent.com/HaraKanon/OCR/main/receipt.jpeg";
-
-        // Recognize text in printed image from a URL
-        console.log(
-          "Read printed text from URL...",
-          printedTextSampleURL.split("/").pop()
-        );
+        // URL から印刷画像のテキストを認識
+        // `readTextFromURL()` 関数を使用して指定された URL から印刷されたテキストを読み取り、`await` を使用してその操作が完了するのを待ってから、`printRecText() を使用して認識されたテキストをコンソールに出力します。
         const printedResult = await readTextFromURL(
           computerVisionClient,
           printedTextSampleURL
         );
         printRecText(printedResult);
 
-        // Perform read and await the result from URL
+        // 読み取りを実行し、URL からの結果を待ちます
         async function readTextFromURL(client, url) {
-          // To recognize text in a local image, replace client.read() with readTextInStream() as shown:
           let result = await client.read(url);
-          // Operation ID is last path segment of operationLocation (a URL)
+          // オペレーション ID は operationLocation (URL) の最後のパス セグメントです
           let operation = result.operationLocation.split("/").slice(-1)[0];
 
-          // Wait for read recognition to complete
-          // result.status is initially undefined, since it's the result of read
+          // 読み取り認識が完了するのを待つ
+          // result.status はread の結果であるため、最初は未定義です。
           while (result.status !== "succeeded") {
             await sleep(1000);
             result = await client.getReadResult(operation);
           }
-          return result.analyzeResult.readResults; // Return the first page of result. Replace [0] with the desired page if this is a multi-page file such as .pdf or .tiff.
+          return result.analyzeResult.readResults; // 結果の最初のページを返します。
         }
 
-        // Prints all text from Read result
+        // 読み取り結果からすべてのテキストを出力します
         function printRecText(readResults) {
-          console.log("Recognized text:");
           for (const page in readResults) {
             if (readResults.length > 1) {
               console.log(`==== Page: ${page}`);
@@ -86,46 +73,6 @@ function computerVision() {
             }
           }
         }
-
-        /**
-         *
-         * Download the specified file in the URL to the current local folder
-         *
-         */
-        function downloadFilesToLocal(url, localFileName) {
-          return new Promise((resolve, reject) => {
-            console.log("--- Downloading file to local directory from: " + url);
-            const request = https.request(url, (res) => {
-              if (res.statusCode !== 200) {
-                console.log(
-                  `Download sample file failed. Status code: ${res.statusCode}, Message: ${res.statusMessage}`
-                );
-                reject();
-              }
-              var data = [];
-              res.on("data", (chunk) => {
-                data.push(chunk);
-              });
-              res.on("end", () => {
-                console.log("   ... Downloaded successfully");
-                fs.writeFileSync(localFileName, Buffer.concat(data));
-                resolve();
-              });
-            });
-            request.on("error", function (e) {
-              console.log(e.message);
-              reject();
-            });
-            request.end();
-          });
-        }
-
-        /**
-         * END - Recognize Printed & Handwritten Text
-         */
-        console.log();
-        console.log("-------------------------------------------------");
-        console.log("End of quickstart.");
       },
       function () {
         return new Promise((resolve) => {
