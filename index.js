@@ -12,7 +12,7 @@ const ComputerVisionClient =
   require("@azure/cognitiveservices-computervision").ComputerVisionClient;
 const ApiKeyCredentials = require("@azure/ms-rest-js").ApiKeyCredentials;
 /**
- * AUTHENTICATE
+ * 認証情報
  * This single client is used for all examples.
  */
 const key = process.env.KEY;
@@ -22,26 +22,30 @@ const computerVisionClient = new ComputerVisionClient(
   new ApiKeyCredentials({ inHeader: { "Ocp-Apim-Subscription-Key": key } }),
   endpoint
 );
-/**
- * END - Authenticate
- */
-
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
 });
+/**
+ * END - 認証情報
+ */
+
 const openai = new OpenAIApi(configuration);
 
+// async関数を定義して、openai.createChatCompletion()メソッドを呼び出し、応答を待機する
 async function ask(content) {
+  // openai.createChatCompletion()メソッドを使用して、GPT-3.5モデルを呼び出す
   const response = await openai.createChatCompletion({
     model: "gpt-3.5-turbo-0301",
     messages: [{ role: "user", content: content }],
   });
 
+  // 応答のchoices配列の最初の要素から、返答の内容を抽出する
   const answer = await response.data.choices[0].message?.content;
   console.log(answer);
 }
 
 function computerVision() {
+  // 関数の配列を順番に実行します。非同期タスクを順次処理するために使用します。
   async.series(
     [
       async function () {
