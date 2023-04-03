@@ -1,6 +1,7 @@
 "use strict";
 
 const async = require("async");
+const { log } = require("console");
 const fs = require("fs");
 const https = require("https");
 const path = require("path");
@@ -40,7 +41,7 @@ function computerVision() {
           computerVisionClient,
           printedTextSampleURL
         );
-        printRecText(printedResult);
+        extractTextFromLine(printedResult);
 
         // 読み取りを実行し、URL からの結果を待ちます
         async function readTextFromURL(client, url) {
@@ -58,7 +59,9 @@ function computerVision() {
         }
 
         // 読み取り結果からすべてのテキストを出力します
-        function printRecText(readResults) {
+        function extractTextFromLine(readResults) {
+          // 空の配列を作成
+          const array = [];
           for (const page in readResults) {
             if (readResults.length > 1) {
               console.log(`==== Page: ${page}`);
@@ -66,12 +69,14 @@ function computerVision() {
             const result = readResults[page];
             if (result.lines.length) {
               for (const line of result.lines) {
-                console.log(line.words.map((w) => w.text).join(" "));
+                // 行の単語を配列に追加する
+                array.push(line.words.map((w) => w.text).join(" "));
               }
             } else {
               console.log("No recognized text.");
             }
           }
+          console.log(array.join("\n"));
         }
       },
       function () {
