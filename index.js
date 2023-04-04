@@ -44,7 +44,7 @@ async function readTextFromURL(client, url) {
 }
 
 // ページの読み取り結果を抽出し、テキストを配列に格納します
-async function extractTextFromLine(readResults) {
+async function extractTextArrayFromReadResults(readResults) {
   const array = [];
   for (const page in readResults) {
     const result = readResults[page];
@@ -56,11 +56,10 @@ async function extractTextFromLine(readResults) {
       console.log("No recognized text.");
     }
   }
-  const resultAsJSON = await convertOCRTextToJSON(array.join("\n"));
-  console.log(resultAsJSON);
+  return array;
 }
 
-// OCRで取得したテキストをJSON形式に変換する関数
+// テキストをJSON形式に変換する関数
 async function convertOCRTextToJSON(content) {
   // OpenAI APIを使用して、GPT-3.5モデルを呼び出す
   const response = await openai.createChatCompletion({
@@ -82,7 +81,7 @@ async function convertOCRTextToJSON(content) {
 }
 
 // OCR APIを利用して画像のURLからテキストを抽出し、テキストデータをopenAIに渡してJSON形式に変換する
-async function extractTextFromImage() {
+async function convertImageToJSON() {
   // コマンドライン引数から、印刷されたテキストや手書きのテキストを含むURLを取得する。今回はコマンドライン引数からURLを取得。
   const printedTextSampleURL = process.argv[2];
 
@@ -91,7 +90,9 @@ async function extractTextFromImage() {
     computerVisionClient,
     printedTextSampleURL
   );
-  extractTextFromLine(printedResult);
+  const extractTextArray = await extractTextArrayFromReadResults(printedResult);
+  const parsedData = await convertOCRTextToJSON(extractTextArray.join("\n"));
+  console.log(parsedData);
 }
 
-extractTextFromImage();
+convertImageToJSON();
