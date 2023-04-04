@@ -1,8 +1,5 @@
 "use strict";
 
-const fs = require("fs");
-const https = require("https");
-const path = require("path");
 require("dotenv").config();
 const { Configuration, OpenAIApi } = require("openai");
 const sleep = require("util").promisify(setTimeout);
@@ -31,6 +28,38 @@ const configuration = new Configuration({
 
 const openai = new OpenAIApi(configuration);
 
+// 読み取りを実行し、URL からの結果を待つ関数
+async function readTextFromURL(client, url) {
+  // read() メソッドを使用して URL から印刷画像のテキストを読み込みます
+  let result = await client.read(url);
+  // オペレーション ID は operationLocation (URL) の最後のパス セグメントです
+  let operation = result.operationLocation.split("/").slice(-1)[0];
+
+  // 読み取りが完了するまで待機します
+  while (result.status !== "succeeded") {
+    await sleep(1000);
+    result = await client.getReadResult(operation);
+  }
+  return result.analyzeResult.readResults; // 結果の最初のページを返します。
+}
+
+// ページの読み取り結果を抽出し、テキストを配列に格納します
+async function extractTextFromLine(readResults) {
+  const array = [];
+  for (const page in readResults) {
+    const result = readResults[page];
+    if (result.lines.length) {
+      for (const line of result.lines) {
+        array.push(line.text);
+      }
+    } else {
+      console.log("No recognized text.");
+    }
+  }
+  const resultAsJSON = await convertOCRTextToJSON(array.join("\n"));
+  console.log(resultAsJSON);
+}
+
 // OCRで取得したテキストをJSON形式に変換する関数
 async function convertOCRTextToJSON(content) {
   // OpenAI APIを使用して、GPT-3.5モデルを呼び出す
@@ -49,7 +78,7 @@ async function convertOCRTextToJSON(content) {
 
   // OpenAI APIからの応答のうち、返答の内容を抽出する
   const answerOpenAI = await response.data.choices[0].message?.content;
-  console.log(answerOpenAI);
+  return answerOpenAI;
 }
 
 // OCR APIを利用して画像のURLからテキストを抽出し、テキストデータをopenAIに渡してJSON形式に変換する
@@ -63,38 +92,6 @@ async function extractTextFromImage() {
     printedTextSampleURL
   );
   extractTextFromLine(printedResult);
-
-  // 読み取りを実行し、URL からの結果を待つ関数
-  async function readTextFromURL(client, url) {
-    // read() メソッドを使用して URL から印刷画像のテキストを読み込みます
-    let result = await client.read(url);
-    // オペレーション ID は operationLocation (URL) の最後のパス セグメントです
-    let operation = result.operationLocation.split("/").slice(-1)[0];
-
-    // 読み取りが完了するまで待機します
-    while (result.status !== "succeeded") {
-      await sleep(1000);
-      result = await client.getReadResult(operation);
-    }
-    return result.analyzeResult.readResults; // 結果の最初のページを返します。
-  }
-
-  // ページの読み取り結果を抽出し、テキストを配列に格納します
-  async function extractTextFromLine(readResults) {
-    const array = [];
-    for (const page in readResults) {
-      const result = readResults[page];
-      if (result.lines.length) {
-        for (const line of result.lines) {
-          // line.wordsに含まれるtextを文字列に変換し、スペースで連結し、配列arrayに追加します。
-          array.push(line.words.map((w) => w.text).join(" "));
-        }
-      } else {
-        console.log("No recognized text.");
-      }
-    }
-    await convertOCRTextToJSON(array.join("\n"));
-  }
 }
 
 extractTextFromImage();
